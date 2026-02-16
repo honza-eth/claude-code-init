@@ -16,30 +16,28 @@ In any project:
 /init my-project-name
 ```
 
-## What It Creates (7 files)
+## What It Creates (6 files + git/GitHub)
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Principles + workflow (~45 lines). Auto-loaded every session. |
-| `STATE.md` | Where we are: current phase, done, in progress, open items, blockers. |
-| `JOURNAL.md` | What we've learned: research, decisions, findings. Append-only. |
-| `.claude/rules/core.md` | Critical rules — permanent, team-shared via git. Auto-loaded. |
-| `MEMORY.md` | Critical rules seeded into auto-memory — personal, Claude can extend. Auto-loaded. |
+| `CLAUDE.md` | Principles + workflow (~50 lines). Auto-loaded every session. |
+| `STATE.md` | Where we are: current phase, done, in progress, open items, blockers. Auto-loaded via `@import`. |
+| `JOURNAL.md` | What we've learned: research, decisions, findings. Append-only. Read on-demand. |
+| `.claude/rules/core.md` | Critical rules doubled — in CLAUDE.md and here — harder to ignore. Auto-loaded. |
 | `.claude/settings.json` | PostToolUse hook (auto-runs tests after edits) + PreCompact hook (archives context). |
 | `.claude/hooks/archive-context.sh` | Saves full conversation transcript before context compaction. |
 
-## The 4 Principles
+## The 3 Principles
 
 1. **Think First** — State assumptions, present tradeoffs, push back if simpler exists
-2. **Minimal Changes** — Only what was requested
-3. **Surgical Edits** — Change only necessary lines
-4. **Verify Everything** — Step → verify → step → verify
+2. **Minimal, Surgical Changes** — Only what was requested, change only necessary lines
+3. **Verify Everything** — Step → verify → step → verify
 
 ## Anti-Lazy-Agent Rule
 
 > IMPORTANT: Always verify against actual sources. Never rely on training memory.
 
-Triple-injected: appears in CLAUDE.md, `.claude/rules/core.md`, and `MEMORY.md`. Three auto-loaded locations make it nearly impossible to ignore.
+Double-injected: appears in CLAUDE.md and `.claude/rules/core.md`. Both auto-loaded, so the rule is in context twice every session.
 
 ## Sources
 

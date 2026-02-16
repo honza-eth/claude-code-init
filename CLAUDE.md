@@ -8,15 +8,14 @@ The `/init` skill bootstraps any project with structured scaffolding for AI-assi
 - `README.md` — Public documentation.
 - `CLAUDE.md` — This file.
 
-## What /init Creates (7 files)
+## What /init Creates (6 files + git/GitHub)
 
 | File | Purpose | Nature |
 |------|---------|--------|
-| CLAUDE.md | Principles + workflow (~45 lines) | Fixed template, auto-loaded |
-| STATE.md | Phase, done, in progress, open items, blockers | Mutable snapshot |
-| JOURNAL.md | Research, decisions, findings | Append-only |
-| .claude/rules/core.md | Critical rules (team-shared, permanent) | Fixed, auto-loaded |
-| MEMORY.md (auto-memory) | Critical rules (personal, Claude can extend) | Seeded, auto-loaded |
+| CLAUDE.md | Principles + workflow (~50 lines) | Fixed template, auto-loaded |
+| STATE.md | Phase, done, in progress, open items, blockers | Mutable snapshot, auto-loaded via @import |
+| JOURNAL.md | Research, decisions, findings | Append-only, read on-demand |
+| .claude/rules/core.md | Critical rules (double-injection) | Fixed, auto-loaded |
 | .claude/settings.json | PostToolUse verification + PreCompact archive hooks | Auto-detected |
 | .claude/hooks/archive-context.sh | Saves full transcript before compaction | Fixed |
 
@@ -37,5 +36,5 @@ All changes should:
 | Less is More | Boris Cherny |
 | Passive > Active | Vercel research |
 | Fixed > Generated | Project design choice |
-| Triple-injection | Reinforces critical rules via CLAUDE.md + rules/core.md + MEMORY.md |
+| Double-injection | Reinforces critical rules via CLAUDE.md + rules/core.md |
 | Verify everything | Boris Cherny, Anthropic |

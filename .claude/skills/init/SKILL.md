@@ -8,7 +8,15 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 
 # Project Initialization
 
-Initialize this project with a structured scaffolding for effective AI-assisted development.
+Initialize this project with structured scaffolding for effective AI-assisted development.
+
+## STEP 0: Check for Existing Files
+
+Before creating anything, check if CLAUDE.md, STATE.md, JOURNAL.md, or .claude/settings.json already exist.
+If any exist, ask the user: **Overwrite, merge, or abort?**
+Never silently overwrite existing files.
+
+---
 
 ## STEP 1: Discovery
 
@@ -28,13 +36,14 @@ Use `$ARGUMENTS` as the project name if provided, otherwise ask.
 
 ## STEP 2: Create Files
 
-### 2a. CLAUDE.md — Copy EXACTLY (replace only `[Project Name]` and `[build/test commands]`):
+### 2a. CLAUDE.md — Copy EXACTLY (replace only `[Project Name]`):
+
+STATE.md is `@`-imported (auto-loaded, small and mutable). JOURNAL.md is read on-demand via Session Start (grows over time, would bloat context if auto-loaded).
 
 ```markdown
 # [Project Name]
 
 @STATE.md
-@JOURNAL.md
 
 ---
 
@@ -47,13 +56,10 @@ Read files before modifying. Check docs before using APIs. Explore before assumi
 State assumptions before acting. Say "I believe X because Y."
 Present tradeoffs. Push back if a simpler approach exists. Useful > polite.
 
-### 2. Minimal Changes
-Only what was requested. No refactoring, no "improvements."
+### 2. Minimal, Surgical Changes
+Only what was requested. Change only necessary lines. Match existing style.
 
-### 3. Surgical Edits
-Change only necessary lines. Match existing style exactly.
-
-### 4. Verify Everything
+### 3. Verify Everything
 Convert tasks to testable goals. Step → verify → step → verify.
 
 ---
@@ -127,38 +133,21 @@ Append-only. Never edit previous entries.
 **Decision**: [Project approach decided during discovery]
 ```
 
-### 2d. .claude/rules/core.md — Permanent reinforcement (team-shared, checked into git):
+### 2d. .claude/rules/core.md — Double-injection of critical rules:
+
+These must include all Principles from CLAUDE.md plus the STATE.md/JOURNAL.md workflow rule.
 
 ```markdown
 # Core Rules (Reinforced)
 
 These rules are critical. Follow them without exception.
 
-1. IMPORTANT: Always verify against actual sources. Read files, check docs, explore the codebase. Never rely on training memory. The codebase is the source of truth.
-2. ALWAYS read files before modifying them.
-3. ONLY make changes that were requested. No extras, no refactoring, no "improvements."
-4. ALWAYS update STATE.md and append to JOURNAL.md after completing work.
+1. IMPORTANT: Always verify against actual sources. Never rely on training memory. Read files before modifying. Check docs before using APIs. Explore before assuming.
+2. State assumptions before acting. Present tradeoffs. Push back if a simpler approach exists.
+3. Only what was requested. Change only necessary lines. Match existing style.
+4. Convert tasks to testable goals. Step → verify → step → verify.
+5. ALWAYS update STATE.md and append to JOURNAL.md after completing work.
 ```
-
-### 2e. MEMORY.md — Seed auto-memory with critical rules:
-
-Write to the project's auto-memory file at `~/.claude/projects/<project-path>/memory/MEMORY.md`.
-Derive `<project-path>` from the current working directory by replacing `/` with `-` and stripping the leading `-`.
-
-```markdown
-# Project Memory
-
-## Critical Rules (do not remove)
-- ALWAYS verify against actual sources. Never rely on training memory.
-- ALWAYS read files before modifying them.
-- ONLY make changes that were requested.
-- ALWAYS update STATE.md and append to JOURNAL.md after completing work.
-
-## Project Notes
-- Initialized with /init on [Today's Date]
-```
-
-Keep this under 30 lines so Claude has room to add its own notes (200-line limit).
 
 ---
 
@@ -168,11 +157,11 @@ Auto-detect the verification command by checking project files:
 
 | If you find... | Use |
 |----------------|-----|
-| `package.json` with test script | `npm test \|\| true` |
-| `pytest.ini` or `tests/` folder (Python) | `pytest \|\| true` |
-| `go.mod` | `go build ./... \|\| true` |
-| `Cargo.toml` | `cargo check \|\| true` |
-| `Makefile` with test target | `make test \|\| true` |
+| `package.json` with test script | `npm test` |
+| `pytest.ini` or `tests/` folder (Python) | `pytest` |
+| `go.mod` | `go build ./...` |
+| `Cargo.toml` | `cargo check` |
+| `Makefile` with test target | `make test` |
 | Formatter config (prettier, black, etc.) | Run formatter |
 | Nothing found | Ask user or skip with note |
 
@@ -197,7 +186,7 @@ Create `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/archive-context.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/archive-context.sh"
           }
         ]
       }
@@ -207,6 +196,8 @@ Create `.claude/settings.json`:
 ```
 
 The `|| true` prevents hook failure from blocking work while still showing output.
+
+Prefer fast checks (linter, type-checker) over slow test suites — this hook runs on every file edit.
 
 ---
 
@@ -219,29 +210,53 @@ Create `.claude/hooks/archive-context.sh` and make it executable:
 # Archives full conversation transcript before compaction
 
 INPUT=$(cat)
-TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path')
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
 
-ARCHIVE_DIR=".claude/archives"
+# Parse transcript path — try jq first, fall back to grep
+if command -v jq &> /dev/null; then
+  TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path')
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+else
+  TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
+  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+fi
+
+ARCHIVE_DIR="$CLAUDE_PROJECT_DIR/.claude/archives"
 mkdir -p "$ARCHIVE_DIR"
 
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
   cp "$TRANSCRIPT_PATH" "$ARCHIVE_DIR/$(date +%Y%m%d-%H%M%S)-${SESSION_ID:0:8}.jsonl"
 fi
 
-# Guide compactor on what to preserve
-echo '{"hookSpecificOutput":{"hookEventName":"PreCompact","customInstructions":"Preserve: modified files list, current STATE.md status, verification commands, and all open items."}}'
-
 exit 0
 ```
 
 Run `chmod +x .claude/hooks/archive-context.sh` after creating it.
 
+Note: `transcript_path` may be empty on some systems (known bug). The script handles this gracefully — if empty, no archive is created.
+
 ---
 
-## Rules for This Bootstrap
+## STEP 5: Git + GitHub
 
-- Copy CLAUDE.md template exactly (only replace `[Project Name]` and fill STATE/JOURNAL from discovery)
-- Keep CLAUDE.md under 50 lines
-- Use "always" / "only" — never "when appropriate" or "consider"
-- Every rule traces to a source: Karpathy (principles), Vercel (passive context), Cherny (verification), Anthropic (emphasis markers)
+1. If not already a git repo, run `git init` and rename branch to `main`.
+   If already a git repo, skip to step 2.
+2. Create `.gitignore` with at minimum:
+   ```
+   .DS_Store
+   .claude/settings.local.json
+   CLAUDE.local.md
+   .claude/archives/
+   ```
+   If `.gitignore` already exists, append any missing entries.
+3. Stage all created files and commit:
+   ```
+   git add .gitignore CLAUDE.md STATE.md JOURNAL.md .claude/
+   git commit -m "Initial project scaffolding via /init"
+   ```
+4. Create a GitHub repo using `gh`:
+   - Use the project name from discovery as the repo name
+   - Ask the user: **Public or private?**
+   - `gh repo create [project-name] --[public|private] --source=. --push`
+5. Confirm the repo URL to the user.
+
+If `gh` is not installed or not authenticated, warn the user and skip the GitHub step.
